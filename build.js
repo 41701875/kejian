@@ -79,12 +79,34 @@ for (const slug of slugs) {
   copyDir(path.join(SRC, slug), path.join(OUT, slug));
 }
 
+// ---- 3.1 复制图标资源，并收集图标列表（无封面时按课件名分配一个）----
+const ICON_DIR = path.join(ROOT, 'assets', 'icons');
+const iconFiles = fs.existsSync(ICON_DIR)
+  ? fs.readdirSync(ICON_DIR).filter((f) => f.toLowerCase().endsWith('.svg'))
+  : [];
+if (iconFiles.length) {
+  copyDir(ICON_DIR, path.join(OUT, 'assets', 'icons'));
+}
+
+// 依据 slug 生成稳定哈希：同一课件每次部署都选到同一个图标（不随每次 push 乱跳）
+function pickIcon(slug) {
+  let h = 0;
+  for (let i = 0; i < slug.length; i++) h = (h * 31 + slug.charCodeAt(i)) >>> 0;
+  return iconFiles[h % iconFiles.length];
+}
+
 // ---- 4. 生成首页 ----
 const cards = items
   .map((it) => {
-    const coverHtml = it.cover
-      ? '<div class="cover-wrap"><img class="cover-img" src="./' + it.slug + '/' + it.cover + '" alt="' + it.title + '" /></div>'
-      : '<div class="cover-wrap placeholder"><svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg></div>';
+    let coverHtml;
+    if (it.cover) {
+      coverHtml = '<div class="cover-wrap"><img class="cover-img" src="./' + it.slug + '/' + it.cover + '" alt="' + it.title + '" /></div>';
+    } else if (iconFiles.length) {
+      const icon = pickIcon(it.slug);
+      coverHtml = '<div class="cover-wrap placeholder"><img class="cover-icon" src="./assets/icons/' + icon + '" alt="图标" /></div>';
+    } else {
+      coverHtml = '<div class="cover-wrap placeholder"><svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#64748b" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg></div>';
+    }
     const tagsHtml = it.tags.map((t) => '<span class="tag">' + t + '</span>').join('');
     const metaLine = (it.date ? '<span class="date">' + it.date + '</span>' : '') + tagsHtml;
     return (
@@ -124,7 +146,7 @@ const html =
   '  .cover-wrap { width: 100%; height: 120px; background: linear-gradient(135deg, #eef2ff, #e0f2fe); overflow: hidden; display: flex; align-items: center; justify-content: center; }\n' +
   '  .cover-img { width: 100%; height: 100%; object-fit: cover; display: block; }\n' +
   '  .cover-wrap.placeholder { color: #94a3b8; }\n' +
-  '  .cover-wrap.placeholder svg { width: 40px; height: 40px; }\n' +
+  '  .cover-icon { width: 44px; height: 44px; }\n' +
   '  .body { padding: 16px 18px 20px; flex: 1; display: flex; flex-direction: column; }\n' +
   '  .body h3 { margin: 0 0 8px; font-size: 17px; }\n' +
   '  .body p { margin: 0 0 12px; color: var(--muted); font-size: 14px; flex: 1; }\n' +
