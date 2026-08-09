@@ -83,8 +83,8 @@ for (const slug of slugs) {
 const cards = items
   .map((it) => {
     const coverHtml = it.cover
-      ? '<img class="cover" src="' + it.slug + '/' + it.cover + '" alt="' + it.title + '" />'
-      : '<div class="cover placeholder">' + (it.title.slice(0, 1) || '?') + '</div>';
+      ? '<div class="cover-wrap"><img class="cover-img" src="./' + it.slug + '/' + it.cover + '" alt="' + it.title + '" /></div>'
+      : '<div class="cover-wrap placeholder"><svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg></div>';
     const tagsHtml = it.tags.map((t) => '<span class="tag">' + t + '</span>').join('');
     const metaLine = (it.date ? '<span class="date">' + it.date + '</span>' : '') + tagsHtml;
     return (
@@ -121,8 +121,10 @@ const html =
   '  main { max-width: 1080px; margin: 0 auto; padding: 32px 24px 64px; display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 20px; }\n' +
   '  .card { background: var(--card); border: 1px solid var(--border); border-radius: 14px; overflow: hidden; text-decoration: none; color: inherit; transition: transform 0.15s ease, box-shadow 0.15s ease; display: flex; flex-direction: column; }\n' +
   '  .card:hover { transform: translateY(-4px); box-shadow: 0 12px 30px rgba(31, 41, 55, 0.12); }\n' +
-  '  .cover { width: 100%; height: 150px; object-fit: cover; display: block; background: #eef2ff; }\n' +
-  '  .cover.placeholder { display: flex; align-items: center; justify-content: center; font-size: 56px; font-weight: 700; color: var(--accent); background: linear-gradient(135deg, #eef2ff, #e0f2fe); }\n' +
+  '  .cover-wrap { width: 100%; height: 120px; background: linear-gradient(135deg, #eef2ff, #e0f2fe); overflow: hidden; display: flex; align-items: center; justify-content: center; }\n' +
+  '  .cover-img { width: 100%; height: 100%; object-fit: cover; display: block; }\n' +
+  '  .cover-wrap.placeholder { color: #94a3b8; }\n' +
+  '  .cover-wrap.placeholder svg { width: 40px; height: 40px; }\n' +
   '  .body { padding: 16px 18px 20px; flex: 1; display: flex; flex-direction: column; }\n' +
   '  .body h3 { margin: 0 0 8px; font-size: 17px; }\n' +
   '  .body p { margin: 0 0 12px; color: var(--muted); font-size: 14px; flex: 1; }\n' +
@@ -141,7 +143,7 @@ const html =
   '  <main>\n' +
   '    __CARDS__\n' +
   '  </main>\n' +
-  '  <footer>由 Cloudflare Pages 自动构建部署 · 共 __COUNT__ 个课件</footer>\n' +
+  '  <footer>这些课件由 盛军老师 创建 · 共 __COUNT__ 个课件</footer>\n' +
   '</body>\n' +
   '</html>';
 
