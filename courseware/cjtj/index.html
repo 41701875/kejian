@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<!-- saved from url=(0023)https://wjgs.pages.dev/ -->
+<html lang="zh-CN"><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+    
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>成绩分析系统 -By玩机故事</title>
+    
+    <!-- 引入外部CSS -->
+    <link rel="stylesheet" href="./index_files/style.css">
+    
+    <!-- 引入Chart.js -->
+    <script src="./index_files/chart.js.下载"></script>
+    
+    <!-- 引入SheetJS用于Excel解析 -->
+    <script src="./index_files/xlsx.js.下载"></script>
+
+    <!-- 引入CSV用于CSV格式解析 -->
+    <script src="./index_files/csv.js.下载"></script>
+
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>成绩统计分析系统</h1>
+            <p class="subtitle">上传或拖拽文件到虚线框区，前端自动分析并生成统计图表。数据不上传服务器，安全可靠！获取更多有趣软件，请关注公众号：玩机故事</p>
+        </header>
+        
+        <section class="upload-area" id="dropArea">
+ 	 <canvas id="watermarkCanvas" style="position:absolute; top:0; left:0; width:100%; height:100%; pointer-events:none;"></canvas>
+            <h2>上传成绩数据文件</h2>
+            <div class="file-input-wrapper">
+                <input type="file" id="fileInput" class="file-input" accept=".xlsx, .xls, .csv">
+                <label for="fileInput" class="file-label">选择文件</label>
+            </div>
+            <p class="file-types">支持格式: Excel (.xlsx, .xls) 或 CSV 文件</p>
+            
+            <div class="loading" id="loadingIndicator">
+                <div class="spinner"></div>
+                <p>正在分析数据并生成图表...</p>
+            </div>
+            
+            <button class="sample-data-btn" id="sampleDataBtn">使用示例数据测试</button>
+        </section>
+        
+        <section id="resultsSection" style="display: none;">
+            <h2 class="chart-title">统计概览</h2>
+            <div class="stats-container">
+                <div class="stat-card">
+                    <div class="stat-title">平均分</div>
+                    <div class="stat-value" id="meanValue">0</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-title">标准差</div>
+                    <div class="stat-value" id="stdDevValue">0</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-title">最高分</div>
+                    <div class="stat-value" id="maxValue">0</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-title">最低分</div>
+                    <div class="stat-value" id="minValue">0</div>
+                </div>
+	<div class="stat-card">
+                    <div class="stat-title">试题区分度</div>
+                     <div id="discriminationValue" class="stat-value">0.00%</div>
+                </div>
+            </div>
+            
+            <div class="charts-container">
+                <div class="chart-wrapper">
+                    <h3 class="chart-title">成绩分布直方图</h3>
+                    <div class="chart-container">
+                        <canvas id="distributionChart"></canvas>
+                    </div>
+                </div>
+                
+                <div class="chart-wrapper">
+                    <h3 class="chart-title">分数段比例</h3>
+                    <div class="chart-container">
+                        <canvas id="pieChart"></canvas>
+                    </div>
+                </div>
+                
+                <div class="chart-wrapper">
+                    <h3 class="chart-title">正态分布曲线</h3>
+                    <div class="chart-container">
+                        <canvas id="normalChart"></canvas>
+                    </div>
+                </div>
+            </div>
+        </section>
+    </div>
+
+    <!-- 引入外部JavaScript -->
+    <script src="./index_files/script.js.下载"></script>
+
+</body></html>

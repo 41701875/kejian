@@ -1,0 +1,10 @@
+{
+  "name": "kejian",
+  "version": "1.0.0",
+  "private": true,
+  "description": "课件中心：单个 Cloudflare Pages 项目托管全部课件，新增课件自动更新",
+  "scripts": {
+    "build": "node build.js",
+    "preview": "node serve.js"
+  }
+}
