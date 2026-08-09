@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>GitHub → Cloudflare Pages 部署演示</title>
+  <style>
+    :root { color-scheme: light; }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0; min-height: 100vh;
+      display: flex; align-items: center; justify-content: center;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
+      background: linear-gradient(135deg, #f0f4ff 0%, #e6f7ff 100%);
+      color: #1f2937;
+    }
+    .card {
+      background: #fff; padding: 40px 48px; border-radius: 16px;
+      box-shadow: 0 10px 40px rgba(31,41,55,0.12); max-width: 520px; text-align: center;
+    }
+    h1 { font-size: 24px; margin: 0 0 12px; }
+    .badge {
+      display: inline-block; padding: 4px 12px; border-radius: 999px;
+      background: #e0f2fe; color: #0369a1; font-size: 13px; font-weight: 600; margin-bottom: 20px;
+    }
+    p { line-height: 1.7; color: #4b5563; }
+    code {
+      background: #f3f4f6; padding: 2px 6px; border-radius: 6px;
+      font-family: "SFMono-Regular", Consolas, monospace; font-size: 13px;
+    }
+    .foot { margin-top: 24px; font-size: 12px; color: #9ca3af; }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <div class="badge">部署成功 ✅</div>
+    <h1>GitHub → Cloudflare Pages 自动部署</h1>
+    <p>
+      这个页面由 <code>git push</code> 触发 Cloudflare Pages 自动构建并全球分发。<br />
+      每次你在本仓库提交并推送，线上内容都会自动更新。
+    </p>
+    <p class="foot">由 WorkBuddy 于 2026-08-09 从 2026-08-05 的往期任务迁移并初始化。</p>
+  </div>
+</body>
+</html>
