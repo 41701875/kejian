@@ -6,28 +6,21 @@
  *  2. 自动扫描 courseware/<slug>/ 下每个课件文件夹（meta.json）
  *  3. 把每个课件原样复制到 public/<slug>/
  *  4. 复制 assets/icons/ 图标资源
- *  5. 生成 public/index.html：
- *     - 顶部 sticky 导航栏（桌面悬浮二级下拉 / 移动端汉堡菜单）
- *     - 各栏目分区（支持二级分组）
- *     - 响应式卡片网格（手机 1~2 列、电脑多列）
+ *  5. 生成 public/index.html：玻璃质感 sticky 导航（无下拉）+ 渐变头图 + 搜索 +
+ *     各栏目分区（点击导航 → 平滑滚动到该分区，下面显示卡片），二级分组在分区内以小标题呈现。
  *
- * Cloudflare Pages 配置：
- *  构建命令：node build.js
- *  输出目录：public
- *  根目录  ：（留空，即仓库根）
+ * Cloudflare Pages 配置：构建命令 node build.js / 输出目录 public / 根目录留空
  *
  * 数据模型（data/nav.json）：
  *  {
- *    "site": { "title", "subtitle", "footer" },
+ *    "site": { "title", "subtitle", "footer", "brandIcon" },
  *    "categories": [
- *      { "title", "icon",                       // 栏目（可带子分组）
- *        "groups": [ { "title","icon","links":[ {title,url,icon,desc} ] } ] },
- *      { "title", "icon", "links": [ {title,url,icon,desc} ] },   // 直接放链接
- *      { "title", "icon", "courseware": true }                    // 自动拉取课件
+ *      { "title", "icon",
+ *        "groups": [ { "title","icon","links":[ {title,url,icon,desc} ] } ] },   // 带二级分组
+ *      { "title", "icon", "links": [ {title,url,icon,desc} ] },                  // 直接链接
+ *      { "title", "icon", "courseware": true }                                   // 自动拉取课件
  *    ]
  *  }
- *  - 链接字段：title 必填，url/icon(emoji 或图片地址)/desc 可选
- *  - 最多两级：栏目 → 分组 → 链接
  */
 
 const fs = require('fs');
@@ -69,25 +62,41 @@ function loadMeta(slug) {
   return {};
 }
 
-// 小号图标（用于导航栏 / 标题），emoji 或图片地址
+// 每栏目的主题色（用于图标底色、强调条、卡片左边线）
+const PALETTE = [
+  { c: '#6366f1', soft: '#eef2ff' },
+  { c: '#0ea5e9', soft: '#e0f2fe' },
+  { c: '#10b981', soft: '#d1fae5' },
+  { c: '#f59e0b', soft: '#fef3c7' },
+  { c: '#ef4444', soft: '#fee2e2' },
+  { c: '#8b5cf6', soft: '#f3e8ff' },
+  { c: '#ec4899', soft: '#fce7f3' },
+  { c: '#14b8a6', soft: '#ccfbf1' }
+];
+
+// 图标：emoji 直接渲染；图片地址渲染为图标块（背景图）
 function iconSpan(icon, fallback) {
   const ic = String(icon || '').trim();
   if (!ic) return esc(fallback);
   if (/^(https?:|\/|data:)/i.test(ic)) return '<img class="nav-ico" src="' + esc(ic) + '" alt="">';
   return esc(ic);
 }
-// 卡片图标（带底色圆角块），emoji 或图片地址，失败回退 emoji
 function cardIcon(icon, fallback) {
   const ic = String(icon || '').trim();
   if (/^(https?:|\/|data:)/i.test(ic)) {
-    return '<img class="card-icon-img" src="' + esc(ic) + '" alt="">';
+    return '<span class="ico ico-img" style="background-image:url(\'' + esc(ic) + '\')"></span>';
   }
-  if (ic) return '<span class="card-icon">' + esc(ic) + '</span>';
-  return '<span class="card-icon">' + esc(fallback) + '</span>';
+  return '<span class="ico">' + esc(ic || fallback) + '</span>';
 }
 
 // ===== 1. 清理并重建输出目录 =====
-rmrf(OUT);
+// 说明：生产环境（Cloudflare Pages）无此限制，rmrf 会正常清空 public。
+// 本地若被安全删除机制拦截，则跳过清空（仅覆盖生成文件），不影响结果。
+try {
+  rmrf(OUT);
+} catch (e) {
+  console.warn('⚠️ 本地清理 public 被拦截（可忽略，仅影响本地预览）：' + e.message);
+}
 fs.mkdirSync(OUT, { recursive: true });
 
 // ===== 2. 读取导航配置 =====
@@ -105,7 +114,7 @@ if (fs.existsSync(navPath)) {
   }
 }
 if (!nav.categories) nav.categories = [];
-const site = Object.assign({ title: '我的导航站', subtitle: '', footer: '' }, nav.site || {});
+const site = Object.assign({ title: '我的导航站', subtitle: '', footer: '', brandIcon: '🧭' }, nav.site || {});
 
 // ===== 3. 收集课件 =====
 const slugs = fs.existsSync(SRC)
@@ -118,16 +127,10 @@ const slugs = fs.existsSync(SRC)
 const coursewareItems = slugs
   .map((slug) => {
     const meta = loadMeta(slug);
-    return {
-      slug,
-      title: meta.title || slug,
-      desc: meta.desc || '',
-      cover: meta.cover || ''
-    };
+    return { slug, title: meta.title || slug, desc: meta.desc || '', cover: meta.cover || '' };
   })
   .sort((a, b) => a.title.localeCompare(b.title));
 
-// 复制课件到 public/<slug>
 for (const slug of slugs) copyDir(path.join(SRC, slug), path.join(OUT, slug));
 
 // 复制图标资源 + 无封面时按 slug 稳定分配图标
@@ -147,113 +150,91 @@ function renderLink(title, url, icon, desc, internal, fallback) {
   return (
     '<a class="card" href="' + esc(url) + '"' + attrs + '>' +
     cardIcon(icon, fallback) +
-    '<div class="card-body"><h3>' + esc(title) + '</h3>' +
-    (desc ? '<p>' + esc(desc) + '</p>' : '') +
-    '</div></a>'
+    '<span class="meta"><b>' + esc(title) + '</b>' +
+    (desc ? '<small>' + esc(desc) + '</small>' : '') +
+    '</span></a>'
   );
 }
 
-function renderCategory(cat, idx) {
+function countOf(cat) {
+  if (cat.courseware) return coursewareItems.length;
+  if (Array.isArray(cat.groups)) return cat.groups.reduce((n, g) => n + (g.links || []).length, 0);
+  return Array.isArray(cat.links) ? cat.links.length : 0;
+}
+
+function renderCategory(cat, idx, pal) {
   const id = 'cat' + idx;
-  const head =
-    '<h2 class="cat-title">' + iconSpan(cat.icon || '📚', '📚') +
-    ' <span>' + esc(cat.title) + '</span></h2>';
   let body = '';
 
   if (cat.courseware) {
-    if (coursewareItems.length) {
-      body = coursewareItems
-        .map((it) => {
-          const icon = it.cover
-            ? './' + it.slug + '/' + it.cover
-            : './assets/icons/' + pickIcon(it.slug);
-          return renderLink(it.title, './' + it.slug + '/', icon, it.desc, true, '📚');
-        })
-        .join('');
-    } else body = '<div class="empty">还没有课件，在 courseware/ 下新建文件夹即可。</div>';
-    return '<section class="cat" id="' + id + '">' + head + '<div class="grid">' + body + '</div></section>';
+    body = coursewareItems.length
+      ? coursewareItems
+          .map((it) => {
+            const icon = it.cover ? './' + it.slug + '/' + it.cover : './assets/icons/' + pickIcon(it.slug);
+            return renderLink(it.title, './' + it.slug + '/', icon, it.desc, true, '📚');
+          })
+          .join('')
+      : '<div class="empty">还没有课件，在 courseware/ 下新建文件夹即可。</div>';
+    if (!cat.groups && !cat.links) {
+      return (
+        '<section class="cat" id="' + id + '" style="--c:' + pal.c + ';--soft:' + pal.soft + '">' +
+        catHead(cat, idx) +
+        '<div class="grid">' + body + '</div></section>'
+      );
+    }
   }
 
   if (Array.isArray(cat.groups) && cat.groups.length) {
     body = cat.groups
-      .map((g, gi) => {
-        const gid = id + '-g' + gi;
+      .map((g) => {
         const cards = (g.links || [])
           .map((l) => renderLink(l.title, l.url, l.icon, l.desc, false, '🔗'))
           .join('');
         return (
-          '<div class="group" id="' + gid + '">' +
-          '<h3 class="group-title">' + iconSpan(g.icon || '🔹', '🔹') +
-          ' <span>' + esc(g.title) + '</span></h3>' +
+          '<div class="group">' +
+          '<h3 class="group-title">' + iconSpan(g.icon || '🔹', '🔹') + ' <span>' + esc(g.title) + '</span></h3>' +
           '<div class="grid">' + (cards || '<div class="empty">该分组暂无内容。</div>') + '</div></div>'
         );
       })
       .join('');
-    return '<section class="cat" id="' + id + '">' + head + body + '</section>';
-  }
-
-  const cards = (cat.links || [])
-    .map((l) => renderLink(l.title, l.url, l.icon, l.desc, false, '🔗'))
-    .join('');
-  return (
-    '<section class="cat" id="' + id + '">' + head +
-    '<div class="grid">' + (cards || '<div class="empty">该栏目暂无内容。</div>') + '</div></section>'
-  );
-}
-
-function dropdownLinks(links) {
-  return (links || [])
-    .map(
-      (l) =>
-        '<a class="dd-link" href="' + esc(l.url) + '" target="_blank" rel="noopener">' +
-        '<span class="di">' + iconSpan(l.icon || '🔗', '🔗') + '</span>' +
-        '<span>' + esc(l.title) + '</span></a>'
-    )
-    .join('');
-}
-
-function renderNavItem(cat, idx) {
-  const id = 'cat' + idx;
-  const hasDropdown = cat.courseware || (Array.isArray(cat.groups) && cat.groups.length) || (Array.isArray(cat.links) && cat.links.length);
-  const caret = hasDropdown ? '<span class="caret">▾</span>' : '';
-
-  let dd = '';
-  if (cat.courseware) {
-    dd = coursewareItems
-      .map(
-        (it) =>
-          '<a class="dd-link" href="./' + it.slug + '/"><span class="di">📚</span><span>' +
-          esc(it.title) + '</span></a>'
-      )
+  } else {
+    const cards = (cat.links || [])
+      .map((l) => renderLink(l.title, l.url, l.icon, l.desc, false, '🔗'))
       .join('');
-  } else if (Array.isArray(cat.groups) && cat.groups.length) {
-    dd = cat.groups
-      .map(
-        (g) =>
-          '<div class="dd-group"><div class="dd-group-title">' +
-          iconSpan(g.icon || '🔹', '🔹') + ' ' + esc(g.title) + '</div>' +
-          dropdownLinks(g.links) +
-          '</div>'
-      )
-      .join('');
-  } else if (Array.isArray(cat.links) && cat.links.length) {
-    dd = dropdownLinks(cat.links);
+    body = '<div class="grid">' + (cards || '<div class="empty">该栏目暂无内容。</div>') + '</div>';
   }
 
   return (
-    '<li class="nav-item">' +
-    '<button class="nav-link" data-target="' + id + '">' +
-    iconSpan(cat.icon || '📚', '📚') + '<span>' + esc(cat.title) + '</span>' + caret +
-    '</button>' +
-    (dd ? '<div class="dropdown">' + dd + '</div>' : '') +
-    '</li>'
+    '<section class="cat" id="' + id + '" style="--c:' + pal.c + ';--soft:' + pal.soft + '">' +
+    catHead(cat, idx) + body + '</section>'
   );
 }
 
-const navItemsHtml = nav.categories.map(renderNavItem).join('');
-const sectionsHtml = nav.categories.map(renderCategory).join('');
+function catHead(cat, idx) {
+  const n = countOf(cat);
+  return (
+    '<div class="cat-head">' +
+    '<span class="bar"></span>' +
+    '<h2>' + iconSpan(cat.icon || '📁', '📁') + ' <span>' + esc(cat.title) + '</span></h2>' +
+    '<span class="count">' + n + ' 个</span>' +
+    '</div>'
+  );
+}
 
-// 统计资源总数（链接 + 课件）
+const pilHtml = nav.categories
+  .map((cat, idx) => {
+    const active = idx === 0 ? ' active' : '';
+    return (
+      '<button class="pill' + active + '" data-target="cat' + idx + '">' +
+      iconSpan(cat.icon || '📁', '📁') + '<span>' + esc(cat.title) + '</span></button>'
+    );
+  })
+  .join('');
+
+const sectionsHtml = nav.categories
+  .map((cat, idx) => renderCategory(cat, idx, PALETTE[idx % PALETTE.length]))
+  .join('');
+
 let total = coursewareItems.length;
 nav.categories.forEach((c) => {
   if (c.courseware) return;
@@ -269,124 +250,129 @@ const html = `<!DOCTYPE html>
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
 <title>${esc(site.title)}</title>
 <style>
-  :root {
-    color-scheme: light;
-    --bg:#f5f7fb; --card:#ffffff; --text:#1f2937; --muted:#6b7280;
-    --accent:#2563eb; --accent2:#4f46e5; --border:#e5e7eb; --navbg:#ffffff;
-  }
-  * { box-sizing: border-box; }
-  body { margin:0; font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Microsoft YaHei",sans-serif; background:var(--bg); color:var(--text); line-height:1.6; }
-  a { color:inherit; }
+  :root { color-scheme: light; --bg:#f4f6fb; --card:#fff; --text:#1e293b; --muted:#64748b; --line:#e8ebf2; }
+  * { box-sizing:border-box; }
+  body { margin:0; font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","PingFang SC","Microsoft YaHei",sans-serif; background:var(--bg); color:var(--text); line-height:1.6; -webkit-font-smoothing:antialiased; }
+  a { color:inherit; text-decoration:none; }
 
-  /* 导航栏 */
-  .navbar { position:sticky; top:0; z-index:50; background:var(--navbg); border-bottom:1px solid var(--border); box-shadow:0 1px 4px rgba(0,0,0,.04); }
-  .nav-inner { max-width:1100px; margin:0 auto; display:flex; align-items:center; gap:12px; padding:10px 16px; position:relative; }
-  .brand { font-weight:700; font-size:17px; text-decoration:none; white-space:nowrap; display:flex; align-items:center; gap:6px; }
-  .nav-toggle { display:none; margin-left:auto; background:none; border:1px solid var(--border); border-radius:8px; font-size:20px; padding:4px 10px; cursor:pointer; }
-  .nav-menu { list-style:none; display:flex; gap:4px; margin:0; padding:0; flex:1; flex-wrap:wrap; }
-  .nav-item { position:relative; }
-  .nav-link { display:flex; align-items:center; gap:4px; background:none; border:none; cursor:pointer; font-size:15px; color:var(--text); padding:8px 12px; border-radius:8px; font-family:inherit; }
-  .nav-link:hover { background:#eef2ff; color:var(--accent); }
-  .caret { font-size:11px; opacity:.6; }
-  .dropdown { position:absolute; top:100%; left:0; min-width:240px; background:#fff; border:1px solid var(--border); border-radius:12px; box-shadow:0 12px 30px rgba(0,0,0,.12); padding:10px; display:none; z-index:60; }
-  .nav-item:hover .dropdown { display:block; }
-  .dd-group { margin-bottom:8px; }
-  .dd-group:last-child { margin-bottom:0; }
-  .dd-group-title { font-size:12px; font-weight:700; color:var(--muted); padding:4px 8px; }
-  .dd-link { display:flex; align-items:center; gap:8px; padding:7px 8px; border-radius:8px; text-decoration:none; color:var(--text); font-size:14px; }
-  .dd-link:hover { background:#f1f5f9; }
-  .dd-link .di { font-size:16px; width:20px; text-align:center; flex:0 0 auto; }
-  .nav-ico { width:18px; height:18px; border-radius:4px; object-fit:cover; vertical-align:middle; }
+  /* 玻璃质感导航 */
+  .navbar { position:sticky; top:0; z-index:50; background:rgba(255,255,255,.82); backdrop-filter:saturate(180%) blur(12px); -webkit-backdrop-filter:saturate(180%) blur(12px); border-bottom:1px solid var(--line); }
+  .nav-inner { max-width:1180px; margin:0 auto; display:flex; align-items:center; gap:14px; padding:12px 20px; }
+  .brand { font-weight:800; font-size:18px; display:flex; align-items:center; gap:8px; white-space:nowrap; letter-spacing:.2px; }
+  .brand .logo { font-size:22px; }
+  .pills { display:flex; gap:8px; margin-left:auto; overflow-x:auto; scrollbar-width:none; -ms-overflow-style:none; }
+  .pills::-webkit-scrollbar { display:none; }
+  .pill { display:inline-flex; align-items:center; gap:6px; white-space:nowrap; border:1px solid transparent; background:rgba(99,102,241,.06); color:#475569; font-size:14px; font-weight:600; padding:8px 16px; border-radius:999px; cursor:pointer; transition:.18s; font-family:inherit; }
+  .pill:hover { background:rgba(99,102,241,.12); color:#4338ca; }
+  .pill.active { background:linear-gradient(135deg,#6366f1,#8b5cf6); color:#fff; box-shadow:0 6px 16px rgba(99,102,241,.35); }
 
-  /* 头图 */
-  .hero { text-align:center; padding:44px 20px 22px; background:linear-gradient(135deg,#eef2ff 0%,#e0f2fe 100%); }
-  .hero h1 { margin:0 0 6px; font-size:30px; }
-  .hero p { margin:0; color:var(--muted); }
+  /* 渐变头图 + 搜索 */
+  .hero { position:relative; overflow:hidden; background:linear-gradient(135deg,#6366f1 0%,#3b82f6 55%,#06b6d4 100%); color:#fff; text-align:center; padding:54px 20px 46px; }
+  .hero::after { content:""; position:absolute; inset:0; background:radial-gradient(900px 320px at 50% -20%,rgba(255,255,255,.28),transparent 60%); pointer-events:none; }
+  .hero-inner { position:relative; max-width:760px; margin:0 auto; }
+  .hero h1 { margin:0 0 8px; font-size:32px; font-weight:800; letter-spacing:.5px; }
+  .hero p { margin:0 0 22px; opacity:.92; font-size:15px; }
+  .search { display:flex; align-items:center; gap:10px; background:#fff; color:#334155; max-width:520px; margin:0 auto; padding:12px 16px; border-radius:14px; box-shadow:0 12px 30px rgba(15,23,42,.18); }
+  .search span { font-size:16px; opacity:.55; }
+  .search input { flex:1; border:none; outline:none; font-size:15px; background:transparent; color:#0f172a; }
+  .search input::placeholder { color:#94a3b8; }
 
-  /* 内容 */
-  main { max-width:1100px; margin:0 auto; padding:28px 16px 60px; }
-  .cat { margin-bottom:36px; scroll-margin-top:72px; }
-  .cat-title { font-size:22px; margin:0 0 14px; display:flex; align-items:center; gap:8px; }
-  .group { margin-bottom:22px; }
-  .group-title { font-size:16px; margin:0 0 12px; color:var(--accent2); display:flex; align-items:center; gap:6px; }
-  .grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(240px,1fr)); gap:16px; }
-  .card { background:var(--card); border:1px solid var(--border); border-radius:14px; padding:16px; display:flex; gap:14px; align-items:flex-start; text-decoration:none; transition:transform .15s ease,box-shadow .15s ease; }
-  .card:hover { transform:translateY(-3px); box-shadow:0 10px 26px rgba(31,41,55,.12); }
-  .card-icon { font-size:24px; line-height:1; flex:0 0 auto; width:42px; height:42px; border-radius:10px; background:#eef2ff; display:flex; align-items:center; justify-content:center; }
-  .card-icon-img { width:42px; height:42px; border-radius:10px; object-fit:cover; flex:0 0 auto; }
-  .card-body { flex:1; min-width:0; }
-  .card-body h3 { margin:0 0 4px; font-size:16px; }
-  .card-body p { margin:0; color:var(--muted); font-size:13px; }
-  .empty { color:var(--muted); text-align:center; padding:30px; grid-column:1/-1; }
+  /* 内容分区 */
+  main { max-width:1180px; margin:0 auto; padding:40px 20px 70px; }
+  .cat { scroll-margin-top:78px; margin-bottom:46px; }
+  .cat-head { display:flex; align-items:center; gap:10px; margin:0 0 18px; }
+  .cat-head .bar { width:5px; height:22px; border-radius:4px; background:var(--c,#6366f1); }
+  .cat-head h2 { margin:0; font-size:21px; font-weight:800; display:flex; align-items:center; gap:8px; }
+  .cat-head .count { margin-left:auto; font-size:13px; color:var(--muted); background:#fff; border:1px solid var(--line); padding:3px 12px; border-radius:999px; }
+  .group { margin-bottom:26px; }
+  .group-title { margin:0 0 12px; font-size:15px; font-weight:700; color:#475569; display:flex; align-items:center; gap:7px; }
 
-  footer { text-align:center; padding:24px; color:var(--muted); font-size:13px; border-top:1px solid var(--border); }
+  .grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(232px,1fr)); gap:16px; }
+  .card { display:flex; align-items:center; gap:13px; background:var(--card); border:1px solid var(--line); border-radius:16px; padding:15px 16px; transition:.18s; position:relative; overflow:hidden; }
+  .card::before { content:""; position:absolute; left:0; top:0; bottom:0; width:3px; background:var(--c,#6366f1); opacity:0; transition:.18s; }
+  .card:hover { transform:translateY(-4px); box-shadow:0 16px 34px rgba(15,23,42,.12); border-color:transparent; }
+  .card:hover::before { opacity:1; }
+  .ico { width:46px; height:46px; border-radius:13px; display:flex; align-items:center; justify-content:center; font-size:22px; flex:0 0 auto; background:var(--soft,#eef2ff); color:var(--c,#6366f1); }
+  .ico-img { background-size:cover; background-position:center; background-color:var(--soft,#eef2ff); }
+  .nav-ico { width:18px; height:18px; border-radius:5px; object-fit:cover; vertical-align:middle; }
+  .meta { min-width:0; display:flex; flex-direction:column; gap:2px; }
+  .meta b { font-size:15px; font-weight:700; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .meta small { font-size:12.5px; color:var(--muted); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .empty { color:var(--muted); text-align:center; padding:34px; grid-column:1/-1; background:var(--card); border:1px dashed var(--line); border-radius:16px; }
 
-  /* 移动端 */
-  @media (max-width:768px) {
-    .nav-toggle { display:block; }
-    .nav-menu { display:none; position:absolute; top:100%; left:0; right:0; background:#fff; border-bottom:1px solid var(--border); flex-direction:column; padding:8px; gap:2px; box-shadow:0 8px 20px rgba(0,0,0,.08); }
-    .nav-menu.open { display:flex; }
-    .nav-item { width:100%; }
-    .nav-link { width:100%; justify-content:space-between; }
-    .dropdown { position:static; display:none; box-shadow:none; border:none; padding:4px 0 4px 12px; min-width:0; }
-    .nav-item.open .dropdown { display:block; }
+  footer { text-align:center; padding:26px 20px; color:var(--muted); font-size:13px; border-top:1px solid var(--line); background:#fff; }
+
+  @media (max-width:720px) {
+    .nav-inner { flex-wrap:wrap; padding:10px 14px; }
+    .brand { font-size:16px; }
+    .pills { margin-left:0; width:100%; padding-bottom:2px; }
+    .hero { padding:40px 16px 34px; }
+    .hero h1 { font-size:25px; }
     .grid { grid-template-columns:repeat(auto-fill,minmax(150px,1fr)); gap:12px; }
-    .card { flex-direction:column; gap:10px; }
-    .hero h1 { font-size:24px; }
+    .card { flex-direction:column; align-items:flex-start; gap:10px; padding:14px; }
+    main { padding:28px 14px 60px; }
+    .meta b, .meta small { white-space:normal; }
   }
 </style>
 </head>
 <body id="top">
   <nav class="navbar" id="navbar">
     <div class="nav-inner">
-      <a class="brand" href="#top">${iconSpan(site.brandIcon || '🧭', '🧭')} <span>${esc(site.title)}</span></a>
-      <button class="nav-toggle" id="navToggle" aria-label="展开菜单">☰</button>
-      <ul class="nav-menu" id="navMenu">
-        ${navItemsHtml}
-      </ul>
+      <a class="brand" href="#top"><span class="logo">${iconSpan(site.brandIcon || '🧭', '🧭')}</span><span>${esc(site.title)}</span></a>
+      <div class="pills" id="pills">${pilHtml}</div>
     </div>
   </nav>
 
   <header class="hero">
-    <h1>${esc(site.title)}</h1>
-    ${site.subtitle ? '<p>' + esc(site.subtitle) + '</p>' : ''}
+    <div class="hero-inner">
+      <h1>${esc(site.title)}</h1>
+      ${site.subtitle ? '<p>' + esc(site.subtitle) + '</p>' : ''}
+      <div class="search"><span>🔍</span><input id="q" type="search" placeholder="搜索资源名称或说明…" aria-label="搜索" /></div>
+    </div>
   </header>
 
-  <main>
-    ${sectionsHtml}
-  </main>
+  <main id="content">${sectionsHtml}</main>
 
   <footer>${esc(site.footer || '')}${site.footer ? ' · ' : ''}共 ${total} 个资源</footer>
 
   <script>
   (function () {
-    var toggle = document.getElementById('navToggle');
-    var menu = document.getElementById('navMenu');
-    if (toggle) {
-      toggle.addEventListener('click', function () { menu.classList.toggle('open'); });
+    var pills = Array.prototype.slice.call(document.querySelectorAll('.pill'));
+    var cats = Array.prototype.slice.call(document.querySelectorAll('.cat'));
+    function setActive(id) {
+      pills.forEach(function (p) { p.classList.toggle('active', p.getAttribute('data-target') === id); });
     }
-    var links = document.querySelectorAll('.nav-link');
-    links.forEach(function (btn) {
-      btn.addEventListener('click', function (e) {
-        var item = btn.closest('.nav-item');
-        if (window.innerWidth <= 768) {
-          item.classList.toggle('open');
-          e.preventDefault();
-          return;
-        }
-        var target = btn.getAttribute('data-target');
-        if (target) {
-          var el = document.getElementById(target);
-          if (el) el.scrollIntoView({ behavior: 'smooth' });
-        }
+    pills.forEach(function (p) {
+      p.addEventListener('click', function () {
+        var el = document.getElementById(p.getAttribute('data-target'));
+        if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        setActive(p.getAttribute('data-target'));
       });
     });
-    document.querySelectorAll('.dd-link').forEach(function (a) {
-      a.addEventListener('click', function () {
-        if (window.innerWidth <= 768) {
-          menu.classList.remove('open');
-          document.querySelectorAll('.nav-item.open').forEach(function (n) { n.classList.remove('open'); });
-        }
+    if ('IntersectionObserver' in window) {
+      var obs = new IntersectionObserver(function (entries) {
+        entries.forEach(function (e) {
+          if (e.isIntersecting) setActive(e.target.id);
+        });
+      }, { rootMargin: '-45% 0px -50% 0px', threshold: 0 });
+      cats.forEach(function (c) { obs.observe(c); });
+    }
+
+    // 搜索过滤
+    var q = document.getElementById('q');
+    q.addEventListener('input', function () {
+      var v = q.value.trim().toLowerCase();
+      document.querySelectorAll('.card').forEach(function (c) {
+        var hit = !v || c.textContent.toLowerCase().indexOf(v) !== -1;
+        c.style.display = hit ? '' : 'none';
+      });
+      document.querySelectorAll('.group').forEach(function (g) {
+        var any = g.querySelector('.card:not([style*="display: none"])');
+        g.style.display = any ? '' : 'none';
+      });
+      document.querySelectorAll('.cat').forEach(function (c) {
+        var any = c.querySelector('.card:not([style*="display: none"])');
+        c.style.display = any ? '' : 'none';
       });
     });
   })();
