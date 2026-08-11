@@ -10,19 +10,45 @@
       "icon": "🔧",
       "groups": [
         {
-          "title": "系统工具",
+          "title": "AI网站",
           "icon": "⚙️",
           "links": [
-            { "title": "百度", "url": "https://www.baidu.com", "icon": "🌐", "desc": "搜索引擎" },
-            { "title": "IPv6 测试", "url": "https://test-ipv6.com", "icon": "🔌", "desc": "检测网络 IPv6 支持" }
+            {
+              "title": "元宝",
+              "url": "https://yuanbao.tencent.com/",
+              "icon": "🌐",
+              "desc": "腾讯元宝AI，浏览器聊天式AI问答，可生成DOC  XLS等文档"
+            },
+            {
+              "title": "Deepseek",
+              "url": "https://chat.deepseek.com/",
+              "icon": "🌐",
+              "desc": "Deepseek AI，梁文峰好样的。"
+            },
+            {
+              "title": "IPv6 测试",
+              "url": "https://test-ipv6.com",
+              "icon": "🔌",
+              "desc": "检测网络 IPv6 支持"
+            }
           ]
         },
         {
           "title": "办公软件",
           "icon": "📄",
           "links": [
-            { "title": "腾讯文档", "url": "https://docs.qq.com", "icon": "📝", "desc": "在线协作文档" },
-            { "title": "WPS", "url": "https://www.wps.cn", "icon": "🗂️", "desc": "办公套件" }
+            {
+              "title": "腾讯文档",
+              "url": "https://docs.qq.com",
+              "icon": "📝",
+              "desc": "在线协作文档"
+            },
+            {
+              "title": "WPS特别版",
+              "url": "https://www.wps.cn",
+              "icon": "🗂️",
+              "desc": "办公套件"
+            }
           ]
         }
       ]
@@ -31,7 +57,12 @@
       "title": "功能展示",
       "icon": "✨",
       "links": [
-        { "title": "示例页面", "url": "https://example.com", "icon": "🖥️", "desc": "功能演示样例" }
+        {
+          "title": "Agnes图生视频",
+          "url": "https://tv.ab0.cc.cd/",
+          "icon": "🖥️",
+          "desc": "手搓Agnes图生视频，令牌czlHfg9OGSPyfA"
+        }
       ]
     },
     {
