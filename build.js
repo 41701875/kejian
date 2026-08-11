@@ -55,7 +55,7 @@ function loadMeta(slug) {
   return {};
 }
 function isImg(ic) {
-  return /^(https?:|\/|data:)/i.test(String(ic || '').trim());
+  return /^(https?:|\/|data:|\.\/|\.\.\/)/i.test(String(ic || '').trim());
 }
 // 图标块内容：图片→<img>，否则 emoji
 function iconInner(icon, fallback) {
@@ -308,7 +308,7 @@ const html = `<!DOCTYPE html>
   .icon-box { width:42px; height:42px; border-radius:11px; display:flex; align-items:center; justify-content:center;
     font-size:20px; background:var(--tag-bg); flex-shrink:0; overflow:hidden; }
   .ic-img { width:42px; height:42px; object-fit:cover; border-radius:11px; }
-  .card .title { font-weight:600; font-size:15px; letter-spacing:-.2px; }
+  .card .title { font-weight:600; font-size:15px; letter-spacing:-.2px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
   .card .desc { font-size:13px; color:var(--text-sec); line-height:1.5; }
   .card .card-footer { margin-top:auto; padding-top:12px; display:flex; align-items:center; justify-content:space-between; }
   .card .url-label { font-size:11px; color:var(--text-dim); font-family:ui-monospace,"SF Mono",Menlo,monospace; }
@@ -324,8 +324,8 @@ const html = `<!DOCTYPE html>
   .quick-card:hover { transform:translateY(-3px); box-shadow:0 8px 24px rgba(0,0,0,.15); border-color:var(--accent-glow); }
   .quick-card .qc-icon { font-size:28px; }
   .quick-card .qc-icon .ic-img { width:28px; height:28px; }
-  .quick-card .qc-title { font-size:14px; font-weight:600; }
-  .quick-card .qc-desc { font-size:11px; color:var(--text-dim); }
+  .quick-card .qc-title { font-size:14px; font-weight:600; max-width:100%; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .quick-card .qc-desc { font-size:11px; color:var(--text-dim); max-width:100%; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
 
   /* Hero */
   .hero { text-align:center; padding:32px 0 8px; }
