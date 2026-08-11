@@ -1,0 +1,43 @@
+{
+  "site": {
+    "title": "盛军老师的导航站",
+    "subtitle": "常用工具 · 功能展示 · 课件，一站直达",
+    "footer": "这些资源由 盛军老师 整理"
+  },
+  "categories": [
+    {
+      "title": "常用工具",
+      "icon": "🔧",
+      "groups": [
+        {
+          "title": "系统工具",
+          "icon": "⚙️",
+          "links": [
+            { "title": "百度", "url": "https://www.baidu.com", "icon": "🌐", "desc": "搜索引擎" },
+            { "title": "IPv6 测试", "url": "https://test-ipv6.com", "icon": "🔌", "desc": "检测网络 IPv6 支持" }
+          ]
+        },
+        {
+          "title": "办公软件",
+          "icon": "📄",
+          "links": [
+            { "title": "腾讯文档", "url": "https://docs.qq.com", "icon": "📝", "desc": "在线协作文档" },
+            { "title": "WPS", "url": "https://www.wps.cn", "icon": "🗂️", "desc": "办公套件" }
+          ]
+        }
+      ]
+    },
+    {
+      "title": "功能展示",
+      "icon": "✨",
+      "links": [
+        { "title": "示例页面", "url": "https://example.com", "icon": "🖥️", "desc": "功能演示样例" }
+      ]
+    },
+    {
+      "title": "课件",
+      "icon": "📚",
+      "courseware": true
+    }
+  ]
+}
