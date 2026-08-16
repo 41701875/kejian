@@ -72,6 +72,24 @@
       ]
     },
     {
+      "title": "下载工具",
+      "icon": "✨",
+      "links": [
+        {
+          "title": "Windows11官方下载地址",
+          "url": "https://www.microsoft.com/zh-cn/software-download/windows11",
+          "icon": "🖥️",
+          "desc": "官方速度还是非常快的，实测能达到40M/s。选择下载适用于 x64 设备的 Windows 11 磁盘映像 (ISO)，然后按照步骤选择语言等选项即可。"
+        },
+        {
+          "title": "Windows10官方下载地址",
+          "url": "https://www.microsoft.com/zh-cn/software-download/windows10",
+          "icon": "🖥️",
+          "desc": "先下载安装媒体工具，然后按照选项使用该工具下载安装介质的说明，下载ISO镜像！"
+        }
+      ]
+    },
+    {
       "title": "课件",
       "icon": "📚",
       "courseware": true
