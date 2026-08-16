@@ -54,19 +54,27 @@ function clientIp(request) {
 }
 async function checkLock(env, request) {
   if (!env.ADMIN_KV) return false;
-  const raw = await env.ADMIN_KV.get('fail:' + clientIp(request));
-  return raw && parseInt(raw, 10) >= MAX_FAILS;
+  try {
+    const raw = await env.ADMIN_KV.get('fail:' + clientIp(request));
+    return raw && parseInt(raw, 10) >= MAX_FAILS;
+  } catch (_) {
+    return false;
+  }
 }
 async function registerFail(env, request) {
   if (!env.ADMIN_KV) return;
-  const ip = clientIp(request);
-  const raw = await env.ADMIN_KV.get('fail:' + ip);
-  const n = (parseInt(raw || '0', 10) + 1).toString();
-  await env.ADMIN_KV.put('fail:' + ip, n, { expirationTtl: LOCK_MINUTES * 60 });
+  try {
+    const ip = clientIp(request);
+    const raw = await env.ADMIN_KV.get('fail:' + ip);
+    const n = (parseInt(raw || '0', 10) + 1).toString();
+    await env.ADMIN_KV.put('fail:' + ip, n, { expirationTtl: LOCK_MINUTES * 60 });
+  } catch (_) {}
 }
 async function clearFails(env, request) {
   if (!env.ADMIN_KV) return;
-  await env.ADMIN_KV.delete('fail:' + clientIp(request));
+  try {
+    await env.ADMIN_KV.delete('fail:' + clientIp(request));
+  } catch (_) {}
 }
 // 常量时间比较，降低时序侧信道风险
 function safeEq(a, b) {
