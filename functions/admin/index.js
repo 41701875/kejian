@@ -46,6 +46,38 @@ function safeRelPath(name) {
     .join('/');
 }
 
+// ===== 防爆破：失败次数锁定（需绑定 ADMIN_KV；未绑定时自动跳过，不影响使用）=====
+const MAX_FAILS = 5;
+const LOCK_MINUTES = 15;
+function clientIp(request) {
+  return request.headers.get('CF-Connecting-IP') || request.headers.get('X-Forwarded-For') || 'unknown';
+}
+async function checkLock(env, request) {
+  if (!env.ADMIN_KV) return false;
+  const raw = await env.ADMIN_KV.get('fail:' + clientIp(request));
+  return raw && parseInt(raw, 10) >= MAX_FAILS;
+}
+async function registerFail(env, request) {
+  if (!env.ADMIN_KV) return;
+  const ip = clientIp(request);
+  const raw = await env.ADMIN_KV.get('fail:' + ip);
+  const n = (parseInt(raw || '0', 10) + 1).toString();
+  await env.ADMIN_KV.put('fail:' + ip, n, { expirationTtl: LOCK_MINUTES * 60 });
+}
+async function clearFails(env, request) {
+  if (!env.ADMIN_KV) return;
+  await env.ADMIN_KV.delete('fail:' + clientIp(request));
+}
+// 常量时间比较，降低时序侧信道风险
+function safeEq(a, b) {
+  const ba = new TextEncoder().encode(a || '');
+  const bb = new TextEncoder().encode(b || '');
+  if (ba.length !== bb.length) return false;
+  let r = 0;
+  for (let i = 0; i < ba.length; i++) r |= ba[i] ^ bb[i];
+  return r === 0;
+}
+
 // 读取仓库文件内容为文本；不存在返回 null
 async function getText(headers, filePath) {
   const res = await fetch(
@@ -422,7 +454,16 @@ export async function onRequestPost(context) {
   }
 
   const password = form.get('password') || '';
-  if (password !== env.ADMIN_PASSWORD) return textResponse(403, '密码错误', 'err');
+
+  // 失败锁定：同一 IP 连续错 5 次，15 分钟内禁止再试
+  if (await checkLock(env, request)) {
+    return textResponse(429, `尝试次数过多，请 ${LOCK_MINUTES} 分钟后再试。`, 'err');
+  }
+  if (!safeEq(password, env.ADMIN_PASSWORD)) {
+    await registerFail(env, request);
+    return textResponse(403, '密码错误', 'err');
+  }
+  await clearFails(env, request);
 
   const action = (form.get('action') || 'add').trim();
 
